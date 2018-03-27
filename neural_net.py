@@ -49,21 +49,45 @@ class Net:
         :param pred_outputs: Predicted output via neural network
         :return: Value of loss
         """
-        raise NotImplemented()
+        return np.square(pred_outputs - self.outputs).sum()
 
     def forward(self):
         """
         Execute forward pass (not sure if should be used)
         """
-        raise NotImplemented()
+        layers_nodes = []
+        pred = Sigmoid.f(self.inputs.dot(self.weights[0]))
+        layers_nodes.append(pred)
+        for i in range(1, len(self.weights) - 1):
+            pred = Sigmoid.f(pred.dot(self.weights[i]))
+            layers_nodes.append(pred)
+        pred = Sigmoid.f(pred.dot(self.weights[-1]))
+        return pred, layers_nodes
 
-    def backward(self):
+    def backward(self, pred_outputs, nodes):
         """
         Compute backward propagation and update weights
         """
-        raise NotImplemented()
+        pred_error = (pred_outputs - self.outputs)
+        # print("prediction error: {}".format(pred_error))
+        delta = pred_error * Sigmoid.derivative(pred_outputs)
+        # print("delta: {}".format(delta))
+        weight_adjustment = nodes[-1].T.dot(delta)
+        # print("weight adjustment: {}".format(weight_adjustment))
+        self.weights[-1] += weight_adjustment * self.learning_rate
 
-    def train(self):
+        n = len(nodes)
+        for i in range(1, n - 1):
+            delta = delta.dot(self.weights[n - i].T) * Sigmoid.derivative(nodes[n - i])
+            weight_adjustment = nodes[n - i].T.dot(delta)
+            self.weights[n - i - 1] += weight_adjustment * self.learning_rate
+
+        delta = delta.dot(self.weights[1].T) * Sigmoid.derivative(nodes[0])
+        weight_adjustment = self.inputs.T.dot(delta)
+        self.weights[0] += weight_adjustment * self.learning_rate
+        return
+
+    def train(self, n_iter=500):
         """
         Train the model.
         Steps:
@@ -72,16 +96,22 @@ class Net:
         - Backward Pass
         - Repeat
         """
-        y_pred = self.weights[0].dot(self.weights[1])
-        for i in range(2, len(self.weights)):
-            y_pred = y_pred.dot(self.weights[i])
-        return y_pred
+        for t in range(n_iter):
+            pred, nodes = self.forward()
+
+            loss = self.calculate_loss(pred)
+            print(t, loss)
+
+            self.backward(pred, nodes)
 
     def predict(self):
         """
         Predict with the model (equivalent to a forward pass)
         """
-        raise NotImplemented()
+        pred = Sigmoid.f(self.inputs.dot(self.weights[0]))
+        for i in range(1, len(self.weights)):
+            pred = Sigmoid.f(pred.dot(self.weights[i]))
+        return pred
 
 
 class Activation:

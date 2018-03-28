@@ -49,7 +49,7 @@ class Net:
         :param pred_outputs: Predicted output via neural network
         :return: Value of loss
         """
-        return np.square(pred_outputs - self.outputs).sum()
+        return -1/self.outputs.shape[0] * np.sum(self.outputs*np.log(pred_outputs) + (1-self.outputs)*np.log(1-pred_outputs))
 
     def forward(self):
         """

@@ -9,7 +9,7 @@ class Net:
     Neural Net Class. Used to generate and train a model.
     """
 
-    def __init__(self, inputs, outputs, layers=(), lr=0.01):
+    def __init__(self, inputs, outputs, layers=(), lr=0.01, random=True):
         """
         Initialisation of our neural network
         :param inputs: Input vectors
@@ -25,23 +25,35 @@ class Net:
         self.weights = None
         self.learning_rate = lr
         self.model = None
-        self._intialize_weights()
+        self._intialize_weights(random)
 
-    def _intialize_weights(self):
+    def _intialize_weights(self, random=True):
         """
         Initialize weights randomly
         """
         self.weights = []
 
-        w1 = np.random.randn(self.input_shape, self.layers[0])
-        self.weights.append(w1)
+        if random:
+            w1 = np.random.randn(self.input_shape, self.layers[0])
+            self.weights.append(w1)
 
-        for i in range(len(self.layers) - 1):
-            wi = np.random.randn(self.layers[i], self.layers[i + 1])
-            self.weights.append(wi)
+            for i in range(len(self.layers) - 1):
+                wi = np.random.randn(self.layers[i], self.layers[i + 1])
+                self.weights.append(wi)
 
-        wn = np.random.randn(self.layers[-1], self.output_shape)
-        self.weights.append(wn)
+            wn = np.random.randn(self.layers[-1], self.output_shape)
+            self.weights.append(wn)
+
+        else:
+            w1 = np.full((self.input_shape, self.layers[0]), 0.5)
+            self.weights.append(w1)
+
+            for i in range(len(self.layers) - 1):
+                wi = np.full((self.layers[i], self.layers[i + 1]), 0.5)
+                self.weights.append(wi)
+
+            wn = np.full((self.layers[-1], self.output_shape), 0.5)
+            self.weights.append(wn)
 
     def cross_entropy_loss(self, pred_outputs):
         """
@@ -80,18 +92,18 @@ class Net:
         """
         pred_error = (pred_outputs - self.outputs)
         delta = pred_error * Sigmoid.derivative(pred_outputs)
-        weight_adjustment = nodes[-1].T.dot(delta)
-        self.weights[-1] += weight_adjustment * self.learning_rate
+        delta = nodes[-1].T.dot(delta)
+        self.weights[-1] -= delta * self.learning_rate
 
         n = len(nodes)
         for i in range(1, n - 1):
-            delta = delta.dot(self.weights[n - i].T) * Sigmoid.derivative(nodes[n - i])
+            delta = delta.T.dot(self.weights[n - i]) * Sigmoid.derivative(nodes[n - i])
             weight_adjustment = nodes[n - i].T.dot(delta)
-            self.weights[n - i - 1] += weight_adjustment * self.learning_rate
+            self.weights[n - i - 1] -= weight_adjustment * self.learning_rate
 
         delta = delta.dot(self.weights[1].T) * Sigmoid.derivative(nodes[0])
         weight_adjustment = self.inputs.T.dot(delta)
-        self.weights[0] += weight_adjustment * self.learning_rate
+        self.weights[0] -= weight_adjustment * self.learning_rate
         return
 
     def train(self, n_iter=500):
@@ -111,11 +123,11 @@ class Net:
 
             self.backward(pred, nodes)
 
-    def predict(self):
+    def predict(self, input):
         """
         Predict with the model (equivalent to a forward pass)
         """
-        pred = Sigmoid.f(self.inputs.dot(self.weights[0]))
+        pred = Sigmoid.f(input.dot(self.weights[0]))
         for i in range(1, len(self.weights)):
             pred = Sigmoid.f(pred.dot(self.weights[i]))
         return pred

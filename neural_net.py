@@ -63,7 +63,8 @@ class Net:
         :param pred_outputs: Predicted output via neural network
         :return: Value of loss
         """
-        return -1/self.outputs.shape[0] * np.sum(self.outputs*np.log(pred_outputs) + (1-self.outputs)*np.log(1-pred_outputs))
+        return -1 / self.outputs.shape[0] * np.sum(
+            self.outputs * np.log(pred_outputs) + (1 - self.outputs) * np.log(1 - pred_outputs))
 
     def mean_squared_error(self, pred_outputs):
         """
@@ -72,40 +73,52 @@ class Net:
         :param pred_outputs: Predicted output via neural network
         :return: value of loss
         """
-        return 1/2 * np.sum(np.square(self.outputs - pred_outputs))
+        return 1 / 2 * np.sum(np.square(self.outputs - pred_outputs))
 
     def forward(self):
         """
         Execute forward pass (not sure if should be used)
         """
         layers_nodes = []
-        pred = Sigmoid.f(self.inputs.dot(self.weights[0]))
-        layers_nodes.append(pred)
+
+        #First layer
+        net_value = self.inputs.dot(self.weights[0])
+        out_value = Sigmoid.f(net_value)
+        layers_nodes.append(net_value)
+
+        # Mid layers
         for i in range(1, len(self.weights) - 1):
-            pred = Sigmoid.f(pred.dot(self.weights[i]))
-            layers_nodes.append(pred)
-        pred = Sigmoid.f(pred.dot(self.weights[-1]))
-        return pred, layers_nodes
+            net_value = out_value.dot(self.weights[i])
+            out_value = Sigmoid.f(net_value)
+            layers_nodes.append(out_value)
+
+        # Last layer
+        net_value = out_value.dot(self.weights[-1])
+        out_value = Sigmoid.f(net_value)
+        layers_nodes.append(net_value)
+        return out_value, layers_nodes
 
     def backward(self, pred_outputs, nodes):
         """
         Compute backward propagation and update weights
         """
-        pred_error = (pred_outputs - self.outputs)
+
+        # Last layer
+        pred_error = - (self.outputs - pred_outputs)
         delta = pred_error * Sigmoid.derivative(pred_outputs)
-        delta = nodes[-1].T.dot(delta)
-        self.weights[-1] -= delta * self.learning_rate
+        weight_adjustment = nodes[-2].T.dot(delta)
+        self.weights[-1] -= weight_adjustment * self.learning_rate
 
-        n = len(nodes)
-        for i in range(1, n - 1):
-            delta = delta.T.dot(self.weights[n - i]) * Sigmoid.derivative(nodes[n - i])
-            weight_adjustment = nodes[n - i].T.dot(delta)
-            self.weights[n - i - 1] -= weight_adjustment * self.learning_rate
+        # Mid layers
+        for i in reversed(range(2, len(nodes))):
+            delta = delta.dot(self.weights[i].T) * Sigmoid.derivative(nodes[i - 1])
+            weight_adjustment = nodes[i - 1].T.dot(delta)
+            self.weights[i - 1] -= weight_adjustment * self.learning_rate
 
+        # First layers
         delta = delta.dot(self.weights[1].T) * Sigmoid.derivative(nodes[0])
         weight_adjustment = self.inputs.T.dot(delta)
         self.weights[0] -= weight_adjustment * self.learning_rate
-        return
 
     def train(self, n_iter=500):
         """

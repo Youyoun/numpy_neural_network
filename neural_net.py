@@ -45,14 +45,15 @@ class Net:
             self.weights.append(wn)
 
         else:
-            w1 = np.full((self.input_shape, self.layers[0]), 0.5)
+            FIX_WEIGHT = 0.5
+            w1 = np.full((self.input_shape, self.layers[0]), FIX_WEIGHT)
             self.weights.append(w1)
 
             for i in range(len(self.layers) - 1):
-                wi = np.full((self.layers[i], self.layers[i + 1]), 0.5)
+                wi = np.full((self.layers[i], self.layers[i + 1]), FIX_WEIGHT)
                 self.weights.append(wi)
 
-            wn = np.full((self.layers[-1], self.output_shape), 0.5)
+            wn = np.full((self.layers[-1], self.output_shape), FIX_WEIGHT)
             self.weights.append(wn)
 
     def cross_entropy_loss(self, pred_outputs):

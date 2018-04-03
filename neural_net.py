@@ -43,13 +43,23 @@ class Net:
         wn = np.random.randn(self.layers[-1], self.output_shape)
         self.weights.append(wn)
 
-    def calculate_loss(self, pred_outputs):
+    def cross_entropy_loss(self, pred_outputs):
         """
-        Compute loss function (Cross entropy loss to begin with)
+        Compute loss function (Cross entropy loss)
+        Formula: E = -1/n * Sum_to_n(yi * log(yi) + (1-yi)*log(1-yi))
         :param pred_outputs: Predicted output via neural network
         :return: Value of loss
         """
         return -1/self.outputs.shape[0] * np.sum(self.outputs*np.log(pred_outputs) + (1-self.outputs)*np.log(1-pred_outputs))
+
+    def mean_squared_error(self, pred_outputs):
+        """
+        Compute loss function (Mean squared error)
+        Formula: E= 1/2 * (target - out)^2
+        :param pred_outputs: Predicted output via neural network
+        :return: value of loss
+        """
+        return 1/2 * np.sum(np.square(self.outputs - pred_outputs))
 
     def forward(self):
         """
@@ -69,11 +79,8 @@ class Net:
         Compute backward propagation and update weights
         """
         pred_error = (pred_outputs - self.outputs)
-        # print("prediction error: {}".format(pred_error))
         delta = pred_error * Sigmoid.derivative(pred_outputs)
-        # print("delta: {}".format(delta))
         weight_adjustment = nodes[-1].T.dot(delta)
-        # print("weight adjustment: {}".format(weight_adjustment))
         self.weights[-1] += weight_adjustment * self.learning_rate
 
         n = len(nodes)
@@ -99,7 +106,7 @@ class Net:
         for t in range(n_iter):
             pred, nodes = self.forward()
 
-            loss = self.calculate_loss(pred)
+            loss = self.cross_entropy_loss(pred)
             print(t, loss)
 
             self.backward(pred, nodes)

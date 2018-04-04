@@ -188,3 +188,29 @@ class Softmax(Activation):
     @staticmethod
     def derivative(x):
         raise NotImplemented()
+
+class ReLU(Activation):
+    """
+    RELU activation function
+    Ref: https://en.wikipedia.org/wiki/Rectifier_(neural_networks)
+    """
+    @staticmethod
+    def f(X):
+        return np.maximum(X, 0)
+
+    @staticmethod
+    def derivative(x):
+        return (x > 0).astype(int)
+
+class Softplus(Activation):
+    """
+    Softplus activation function
+    Ref: https://en.wikipedia.org/wiki/Rectifier_(neural_networks)
+    """
+    @staticmethod
+    def f(X):
+        return np.log(1 + np.exp(X))
+
+    @staticmethod
+    def derivative(X):
+        return Sigmoid.f(X)

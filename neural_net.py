@@ -141,6 +141,7 @@ class Net:
         """
         Predict with the model (equivalent to a forward pass)
         """
+        input = np.array(input)
         pred = Sigmoid.f(input.dot(self.weights[0]))
         for i in range(1, len(self.weights)):
             pred = Sigmoid.f(pred.dot(self.weights[i]))
@@ -214,3 +215,16 @@ class Softplus(Activation):
     @staticmethod
     def derivative(X):
         return Sigmoid.f(X)
+
+class Tanh(Activation):
+    """
+    Softplus activation function
+    Ref: https://en.wikipedia.org/wiki/Rectifier_(neural_networks)
+    """
+    @staticmethod
+    def f(X):
+        return np.tanh(X)
+
+    @staticmethod
+    def derivative(X):
+        return 1 - np.square(np.tanh())

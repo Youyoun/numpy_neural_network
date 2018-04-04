@@ -9,7 +9,7 @@ class Net:
     Neural Net Class. Used to generate and train a model.
     """
 
-    def __init__(self, inputs, outputs, layers=(), lr=0.01, random=True):
+    def __init__(self, inputs, outputs, layers=(), mid_layer_activation=Sigmoid, output_layer_activation=Sigmoid, lr=0.01, random=True):
         """
         Initialisation of our neural network
         :param inputs: Input vectors
@@ -27,6 +27,9 @@ class Net:
         self.model = None
         self._intialize_weights(random)
 
+        self.activation = mid_layer_activation
+        self.output_activation = output_layer_activation
+
     def _intialize_weights(self, random=True):
         """
         Initialize weights randomly
@@ -34,14 +37,14 @@ class Net:
         self.weights = []
 
         if random:
-            w1 = np.random.randn(self.input_shape, self.layers[0])
+            w1 = np.random.uniform(1,0,(self.input_shape, self.layers[0]))
             self.weights.append(w1)
 
             for i in range(len(self.layers) - 1):
-                wi = np.random.randn(self.layers[i], self.layers[i + 1])
+                wi = np.random.uniform(1,0,(self.layers[i], self.layers[i + 1]))
                 self.weights.append(wi)
 
-            wn = np.random.randn(self.layers[-1], self.output_shape)
+            wn = np.random.uniform(1,0,(self.layers[-1], self.output_shape))
             self.weights.append(wn)
 
         else:
@@ -83,18 +86,18 @@ class Net:
 
         #First layer
         net_value = self.inputs.dot(self.weights[0])
-        out_value = Sigmoid.f(net_value)
+        out_value = self.activation.f(net_value)
         layers_nodes.append(net_value)
 
         # Mid layers
         for i in range(1, len(self.weights) - 1):
             net_value = out_value.dot(self.weights[i])
-            out_value = Sigmoid.f(net_value)
+            out_value = self.activation.f(net_value)
             layers_nodes.append(out_value)
 
         # Last layer
         net_value = out_value.dot(self.weights[-1])
-        out_value = Sigmoid.f(net_value)
+        out_value = self.output_activation.f(net_value)
         layers_nodes.append(net_value)
         return out_value, layers_nodes
 
@@ -105,18 +108,18 @@ class Net:
 
         # Last layer
         pred_error = - (self.outputs - pred_outputs)
-        delta = pred_error * Sigmoid.derivative(pred_outputs)
+        delta = pred_error * self.output_activation.derivative(pred_outputs)
         weight_adjustment = nodes[-2].T.dot(delta)
         self.weights[-1] -= weight_adjustment * self.learning_rate
 
         # Mid layers
         for i in reversed(range(2, len(nodes))):
-            delta = delta.dot(self.weights[i].T) * Sigmoid.derivative(nodes[i - 1])
+            delta = delta.dot(self.weights[i].T) * self.activation.derivative(nodes[i - 1])
             weight_adjustment = nodes[i - 1].T.dot(delta)
             self.weights[i - 1] -= weight_adjustment * self.learning_rate
 
         # First layers
-        delta = delta.dot(self.weights[1].T) * Sigmoid.derivative(nodes[0])
+        delta = delta.dot(self.weights[1].T) * self.activation.derivative(nodes[0])
         weight_adjustment = self.inputs.T.dot(delta)
         self.weights[0] -= weight_adjustment * self.learning_rate
 
@@ -132,7 +135,7 @@ class Net:
         for t in range(n_iter):
             pred, nodes = self.forward()
 
-            loss = self.cross_entropy_loss(pred)
+            loss = self.mean_squared_error(pred)
             print(t, loss)
 
             self.backward(pred, nodes)
@@ -142,9 +145,10 @@ class Net:
         Predict with the model (equivalent to a forward pass)
         """
         input = np.array(input)
-        pred = Sigmoid.f(input.dot(self.weights[0]))
-        for i in range(1, len(self.weights)):
-            pred = Sigmoid.f(pred.dot(self.weights[i]))
+        pred = self.activation.f(input.dot(self.weights[0]))
+        for i in range(1, len(self.weights) - 1):
+            pred = self.activation.f(pred.dot(self.weights[i]))
+        pred = self.output_activation.f(pred.dot(self.weights[-1]))
         return pred
 
 
@@ -227,4 +231,4 @@ class Tanh(Activation):
 
     @staticmethod
     def derivative(X):
-        return 1 - np.square(np.tanh())
+        return 1 - np.square(np.tanh(X))

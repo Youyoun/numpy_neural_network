@@ -126,26 +126,26 @@ class Net:
         self.weights = []
 
         if random:
-            w1 = np.random.uniform(1, 0, (self.input_shape, self.layers[0])).T
+            w1 = np.random.uniform(1, 0, (self.layers[0], self.input_shape))
             self.weights.append(w1)
 
             for i in range(len(self.layers) - 1):
-                wi = np.random.uniform(1, 0, (self.layers[i], self.layers[i + 1])).T
+                wi = np.random.uniform(1, 0, (self.layers[i + 1], self.layers[i]))
                 self.weights.append(wi)
 
-            wn = np.random.uniform(1, 0, (self.layers[-1], self.output_shape)).T
+            wn = np.random.uniform(1, 0, (self.output_shape, self.layers[-1]))
             self.weights.append(wn)
 
         else:
             FIX_WEIGHT = 0.5
-            w1 = np.full((self.input_shape, self.layers[0]), FIX_WEIGHT).T
+            w1 = np.full((self.layers[0], self.input_shape), FIX_WEIGHT)
             self.weights.append(w1)
 
             for i in range(len(self.layers) - 1):
-                wi = np.full((self.layers[i], self.layers[i + 1]), FIX_WEIGHT).T
+                wi = np.full((self.layers[i + 1], self.layers[i]), FIX_WEIGHT)
                 self.weights.append(wi)
 
-            wn = np.full((self.layers[-1], self.output_shape), FIX_WEIGHT).T
+            wn = np.full((self.output_shape, self.layers[-1]), FIX_WEIGHT)
             self.weights.append(wn)
 
     def cross_entropy_loss(self, pred_outputs):
@@ -211,7 +211,6 @@ class Net:
         delta = np.dot(self.weights[1].T, delta) * self.activation.derivative(nodes[0])
         weight_adjustment = np.dot(delta, self.inputs.T)
         self.weights[0] -= weight_adjustment * self.learning_rate
-        return pred_error
 
     def train(self, n_iter=500, epochs=10):
         """
@@ -226,8 +225,8 @@ class Net:
             for i in range(n_iter):
                 pred, nodes = self.forward()
                 loss = self.mean_squared_error(pred)
-                err = self.backward(pred, nodes)
-            print("Epoch: {} Loss: {} Error: {}".format(t, loss, np.mean(err)))
+                self.backward(pred, nodes)
+            print("Epoch: {} Loss: {} Mean difference: {}".format(t, loss, np.mean(self.outputs - pred)))
 
     def predict(self, input):
         """

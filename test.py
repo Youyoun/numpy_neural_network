@@ -3,7 +3,7 @@ import numpy as np
 
 LEARNING_RATE = 0.8
 ACTIVATION = nn.Sigmoid
-RANDOM_WEIGHTS = False
+RANDOM_WEIGHTS = True
 LAYERS = (2,)
 
 INPUTS = np.array([[0, 0, 1, 1], [0, 1, 0, 1]])
@@ -11,7 +11,10 @@ OUTPUTS = np.array([[0, 1, 1, 0]])
 
 a = nn.Net(INPUTS, OUTPUTS, layers=(2,), mid_layer_activation=ACTIVATION, output_layer_activation=ACTIVATION,
            lr=LEARNING_RATE, random=RANDOM_WEIGHTS)
-print(a.weights)
+
+print("Initial Weights: ")
+for i in range(len(a.weights)):
+    print("Layer {}:\n {}".format(i, a.weights[i]))
 
 a.train(n_iter=100)
 

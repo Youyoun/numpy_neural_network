@@ -112,6 +112,7 @@ class Net:
         self.output_shape = self.outputs.shape[0]
         self.layers = layers
         self.weights = None
+        self.biases = None
         self.learning_rate = lr
         self.model = None
         self._intialize_weights(random)
@@ -124,29 +125,36 @@ class Net:
         Initialize weights randomly
         """
         self.weights = []
+        self.biases = []
 
         if random:
-            w1 = np.random.uniform(1, 0, (self.layers[0], self.input_shape))
+            w1 = np.random.uniform(-1, 1, (self.layers[0], self.input_shape))
             self.weights.append(w1)
+            self.biases.append(np.random.uniform(1, 0, (self.layers[0], 1)))
 
             for i in range(len(self.layers) - 1):
-                wi = np.random.uniform(1, 0, (self.layers[i + 1], self.layers[i]))
+                wi = np.random.uniform(-1, 1, (self.layers[i + 1], self.layers[i]))
                 self.weights.append(wi)
+                self.biases.append(np.random.uniform(1, 0, (self.layers[i + 1], 1)))
 
-            wn = np.random.uniform(1, 0, (self.output_shape, self.layers[-1]))
+            wn = np.random.uniform(-1, 1, (self.output_shape, self.layers[-1]))
             self.weights.append(wn)
+            self.biases.append(np.random.uniform(1, 0, (self.output_shape, )))
 
         else:
             FIX_WEIGHT = 0.5
             w1 = np.full((self.layers[0], self.input_shape), FIX_WEIGHT)
             self.weights.append(w1)
+            self.biases.append(np.full((self.layers[0], 1), FIX_WEIGHT))
 
             for i in range(len(self.layers) - 1):
                 wi = np.full((self.layers[i + 1], self.layers[i]), FIX_WEIGHT)
                 self.weights.append(wi)
+                self.biases.append(np.full((self.layers[i+1], 1), FIX_WEIGHT))
 
             wn = np.full((self.output_shape, self.layers[-1]), FIX_WEIGHT)
             self.weights.append(wn)
+            self.biases.append(np.full((self.output_shape, 1), FIX_WEIGHT))
 
     def cross_entropy_loss(self, pred_outputs):
         """
@@ -174,18 +182,18 @@ class Net:
         layers_nodes = []
 
         # First layer
-        net_value = np.dot(self.weights[0], self.inputs)
+        net_value = np.dot(self.weights[0], self.inputs) + self.biases[0]
         out_value = self.activation.f(net_value)
         layers_nodes.append(net_value)
 
         # Mid layers
         for i in range(1, len(self.weights) - 1):
-            net_value = np.dot(self.weights[i], out_value)
+            net_value = np.dot(self.weights[i], out_value) + self.biases[i]
             out_value = self.activation.f(net_value)
             layers_nodes.append(net_value)
 
         # Last layer
-        net_value = np.dot(self.weights[-1], out_value)
+        net_value = np.dot(self.weights[-1], out_value) + self.biases[-1]
         out_value = self.output_activation.f(net_value)
         layers_nodes.append(net_value)
         return out_value, layers_nodes

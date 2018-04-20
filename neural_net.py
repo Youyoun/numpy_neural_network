@@ -202,23 +202,31 @@ class Net:
         """
         Compute backward propagation and update weights
         """
+        adjustments = []
 
         # Last layer
         pred_error = - (1 / len(pred_outputs)) * (self.outputs - pred_outputs)
         delta = pred_error * self.output_activation.derivative(nodes[-1])
         weight_adjustment = np.dot(delta, nodes[-2].T)
-        self.weights[-1] -= weight_adjustment * self.learning_rate
+        # self.weights[-1] -= weight_adjustment * self.learning_rate
+        adjustments.insert(0, weight_adjustment)
 
         # Mid layers
         for i in reversed(range(2, len(nodes))):
             delta = np.dot(self.weights[i].T, delta) * self.activation.derivative(nodes[i - 1])
             weight_adjustment = np.dot(delta, nodes[i - 1].T)
-            self.weights[i - 1] -= weight_adjustment * self.learning_rate
+            # self.weights[i - 1] -= weight_adjustment * self.learning_rate
+            adjustments.insert(0, weight_adjustment)
 
         # First layers
         delta = np.dot(self.weights[1].T, delta) * self.activation.derivative(nodes[0])
         weight_adjustment = np.dot(delta, self.inputs.T)
-        self.weights[0] -= weight_adjustment * self.learning_rate
+        # self.weights[0] -= weight_adjustment * self.learning_rate
+
+        # Update weights
+        adjustments.insert(0, weight_adjustment)
+        for i in range(len(adjustments)):
+            self.weights[i] -= self.learning_rate * adjustments[i]
 
     def train(self, n_iter=500, epochs=10):
         """

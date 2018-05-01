@@ -203,30 +203,35 @@ class Net:
         Compute backward propagation and update weights
         """
         adjustments = []
+        deltas = []
 
         # Last layer
         pred_error = - (1 / len(pred_outputs)) * (self.outputs - pred_outputs)
         delta = pred_error * self.output_activation.derivative(nodes[-1])
         weight_adjustment = np.dot(delta, nodes[-2].T)
-        # self.weights[-1] -= weight_adjustment * self.learning_rate
         adjustments.insert(0, weight_adjustment)
+        deltas.insert(0, delta)
 
         # Mid layers
         for i in reversed(range(2, len(nodes))):
             delta = np.dot(self.weights[i].T, delta) * self.activation.derivative(nodes[i - 1])
             weight_adjustment = np.dot(delta, nodes[i - 1].T)
-            # self.weights[i - 1] -= weight_adjustment * self.learning_rate
             adjustments.insert(0, weight_adjustment)
+            deltas.insert(0, delta)
 
         # First layers
         delta = np.dot(self.weights[1].T, delta) * self.activation.derivative(nodes[0])
         weight_adjustment = np.dot(delta, self.inputs.T)
-        # self.weights[0] -= weight_adjustment * self.learning_rate
+        adjustments.insert(0, weight_adjustment)
+        deltas.insert(0, delta)
 
         # Update weights
-        adjustments.insert(0, weight_adjustment)
         for i in range(len(adjustments)):
             self.weights[i] -= self.learning_rate * adjustments[i]
+            if self.biases[i].shape == (1,):
+                self.biases[i] -= self.learning_rate * np.array([[np.mean(e)] for e in deltas[i]])[0]
+            else:
+                self.biases[i] -= self.learning_rate * np.array([[np.mean(e)] for e in deltas[i]])
 
     def train(self, n_iter=500, epochs=10):
         """

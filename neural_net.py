@@ -98,7 +98,7 @@ class Net:
     Neural Net Class. Used to generate and train a model.
     """
 
-    def __init__(self, layers=(), mid_layer_activation=Sigmoid, output_layer_activation=Sigmoid, lr=0.01, random=True):
+    def __init__(self, layers=(), activation=Sigmoid, lr=0.01, random=True):
         """
         Initialisation of our neural network
         :param inputs: Input vectors
@@ -113,8 +113,7 @@ class Net:
         self.model = None
         self._intialize_weights(random)
 
-        self.activation = mid_layer_activation
-        self.output_activation = output_layer_activation
+        self.activation = activation
 
     def _intialize_weights(self, random=True):
         """
@@ -134,6 +133,15 @@ class Net:
                 weights.append(wi)
                 biases.append(np.full((self.layers[i + 1], 1), fix_weight))
         self.weights, self.biases = np.array(weights), np.array(biases)
+
+    def check_dimensions(self, inputs, outputs):
+        if self.layers[0] != inputs.shape[0]:
+            raise ValueError(
+                "Incorrect dimension of features: Expected {} got {}".format(self.layers[0], inputs.shape[0]))
+        elif self.layers[-1] != outputs.shape[0]:
+            raise ValueError(
+                "Incorrect dimension of outputs: Expected {} got {}".format(self.layers[-1], outputs.shape[0]))
+        return
 
     def cross_entropy_loss(self, real_outputs, pred_outputs):
         """
@@ -156,7 +164,7 @@ class Net:
 
     def forward(self, inputs):
         """
-        Execute forward pass (not sure if should be used)
+        Execute forward pass (not sure if should be split from back propagation)
         """
         layers_nodes = []
 
@@ -165,16 +173,11 @@ class Net:
         out_value = self.activation.f(net_value)
         layers_nodes.append(net_value)
 
-        # Mid layers
-        for i in range(1, len(self.weights) - 1):
+        # Mid and Last layers
+        for i in range(1, len(self.weights)):
             net_value = np.dot(self.weights[i], out_value) + self.biases[i]
             out_value = self.activation.f(net_value)
             layers_nodes.append(net_value)
-
-        # Last layer
-        net_value = np.dot(self.weights[-1], out_value) + self.biases[-1]
-        out_value = self.output_activation.f(net_value)
-        layers_nodes.append(net_value)
         return out_value, layers_nodes
 
     def backward(self, inputs, outputs, pred_outputs, nodes):
@@ -186,7 +189,7 @@ class Net:
 
         # Last layer
         pred_error = - (1 / len(pred_outputs)) * (outputs - pred_outputs)
-        delta = pred_error * self.output_activation.derivative(nodes[-1])
+        delta = pred_error * self.activation.derivative(nodes[-1])
         weight_adjustment = np.dot(delta, nodes[-2].T)
         adjustments.insert(0, weight_adjustment)
         deltas.insert(0, delta)
@@ -221,6 +224,7 @@ class Net:
         - Backward Pass
         - Repeat
         """
+        self.check_dimensions(inputs, outputs)
         for t in range(epochs):
             for i in range(n_iter):
                 pred, nodes = self.forward(inputs)
@@ -236,5 +240,5 @@ class Net:
         pred = self.activation.f(np.dot(self.weights[0], input))
         for i in range(1, len(self.weights) - 1):
             pred = self.activation.f(np.dot(self.weights[i], pred))
-        pred = self.output_activation.f(np.dot(self.weights[-1], pred))
+        pred = self.activation.f(np.dot(self.weights[-1], pred))
         return pred

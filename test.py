@@ -4,13 +4,12 @@ import numpy as np
 LEARNING_RATE = 0.8
 ACTIVATION = nn.Sigmoid
 RANDOM_WEIGHTS = True
-LAYERS = (2,5,5,5,1)
+LAYERS = (2, 5, 5, 5, 1)
 
 INPUTS = np.array([[0, 0, 1, 1], [0, 1, 0, 1]])
 OUTPUTS = np.array([[0, 1, 1, 0]])
 
-a = nn.Net(layers=LAYERS, mid_layer_activation=ACTIVATION, output_layer_activation=ACTIVATION,
-           lr=LEARNING_RATE, random=RANDOM_WEIGHTS)
+a = nn.Net(layers=LAYERS, activation=ACTIVATION, lr=LEARNING_RATE, random=RANDOM_WEIGHTS)
 
 print("Initial Weights: ")
 for i in range(len(a.weights)):

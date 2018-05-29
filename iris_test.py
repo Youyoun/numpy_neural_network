@@ -6,12 +6,13 @@ LEARNING_RATE = 0.01
 ACTIVATION = nn.Softmax
 RANDOM_WEIGHTS = True
 LOSS_FN = nn.CrossEntropyLoss
-LAYERS = (4, 20, 10, 1)
+LAYERS = (4, 20, 1)
 
 DATASET = load_iris()
 INPUTS = DATASET.data.T
 OUTPUTS = np.array([DATASET.target])
 print(OUTPUTS.shape)
+print(INPUTS.shape)
 
 a = nn.Net(layers=LAYERS, activation=ACTIVATION, loss=LOSS_FN, lr=LEARNING_RATE, random=RANDOM_WEIGHTS)
 

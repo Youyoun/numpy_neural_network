@@ -98,8 +98,7 @@ class Net:
     Neural Net Class. Used to generate and train a model.
     """
 
-    def __init__(self, inputs, outputs, layers=(), mid_layer_activation=Sigmoid, output_layer_activation=Sigmoid,
-                 lr=0.01, random=True):
+    def __init__(self, layers=(), mid_layer_activation=Sigmoid, output_layer_activation=Sigmoid, lr=0.01, random=True):
         """
         Initialisation of our neural network
         :param inputs: Input vectors
@@ -107,10 +106,6 @@ class Net:
         :param layers: Number of nodes per layer (only linear layers are supported)
         :param lr: Learning rate
         """
-        self.inputs = np.array(inputs)
-        self.outputs = np.array(outputs)
-        self.input_shape = self.inputs.shape[0]
-        self.output_shape = self.outputs.shape[0]
         self.layers = layers
         self.weights = None
         self.biases = None
@@ -125,65 +120,48 @@ class Net:
         """
         Initialize weights randomly
         """
-        self.weights = []
-        self.biases = []
-
+        weights = []
+        biases = []
         if random:
-            w1 = np.random.uniform(-1, 1, (self.layers[0], self.input_shape))
-            self.weights.append(w1)
-            self.biases.append(np.random.uniform(1, 0, (self.layers[0], 1)))
-
             for i in range(len(self.layers) - 1):
                 wi = np.random.uniform(-1, 1, (self.layers[i + 1], self.layers[i]))
-                self.weights.append(wi)
-                self.biases.append(np.random.uniform(1, 0, (self.layers[i + 1], 1)))
-
-            wn = np.random.uniform(-1, 1, (self.output_shape, self.layers[-1]))
-            self.weights.append(wn)
-            self.biases.append(np.random.uniform(1, 0, (self.output_shape,)))
-
+                weights.append(wi)
+                biases.append(np.random.uniform(1, 0, (self.layers[i + 1], 1)))
         else:
             fix_weight = 0.5
-            w1 = np.full((self.layers[0], self.input_shape), fix_weight)
-            self.weights.append(w1)
-            self.biases.append(np.full((self.layers[0], 1), fix_weight))
-
             for i in range(len(self.layers) - 1):
                 wi = np.full((self.layers[i + 1], self.layers[i]), fix_weight)
-                self.weights.append(wi)
-                self.biases.append(np.full((self.layers[i + 1], 1), fix_weight))
+                weights.append(wi)
+                biases.append(np.full((self.layers[i + 1], 1), fix_weight))
+        self.weights, self.biases = np.array(weights), np.array(biases)
 
-            wn = np.full((self.output_shape, self.layers[-1]), fix_weight)
-            self.weights.append(wn)
-            self.biases.append(np.full((self.output_shape, 1), fix_weight))
-
-    def cross_entropy_loss(self, pred_outputs):
+    def cross_entropy_loss(self, real_outputs, pred_outputs):
         """
         Compute loss function (Cross entropy loss)
         Formula: E = -1/n * Sum_to_n(yi * log(yi) + (1-yi)*log(1-yi))
         :param pred_outputs: Predicted output via neural network
         :return: Value of loss
         """
-        return -1 / self.outputs.shape[0] * np.sum(
-            self.outputs * np.log(pred_outputs) + (1 - self.outputs) * np.log(1 - pred_outputs))
+        return -1 / real_outputs.shape[1] * np.sum(
+            real_outputs * np.log(pred_outputs) + (1 - real_outputs) * np.log(1 - pred_outputs))
 
-    def mean_squared_error(self, pred_outputs):
+    def mean_squared_error(self, real_outputs, pred_outputs):
         """
         Compute loss function (Mean squared error)
         Formula: E= 1/2 * (target - out)^2
         :param pred_outputs: Predicted output via neural network
         :return: value of loss
         """
-        return 1 / (2 * len(pred_outputs)) * np.sum(np.square(self.outputs - pred_outputs))
+        return 1 / (2 * len(pred_outputs)) * np.sum(np.square(real_outputs - pred_outputs))
 
-    def forward(self):
+    def forward(self, inputs):
         """
         Execute forward pass (not sure if should be used)
         """
         layers_nodes = []
 
         # First layer
-        net_value = np.dot(self.weights[0], self.inputs) + self.biases[0]
+        net_value = np.dot(self.weights[0], inputs) + self.biases[0]
         out_value = self.activation.f(net_value)
         layers_nodes.append(net_value)
 
@@ -199,7 +177,7 @@ class Net:
         layers_nodes.append(net_value)
         return out_value, layers_nodes
 
-    def backward(self, pred_outputs, nodes):
+    def backward(self, inputs, outputs, pred_outputs, nodes):
         """
         Compute backward propagation and update weights
         """
@@ -207,7 +185,7 @@ class Net:
         deltas = []
 
         # Last layer
-        pred_error = - (1 / len(pred_outputs)) * (self.outputs - pred_outputs)
+        pred_error = - (1 / len(pred_outputs)) * (outputs - pred_outputs)
         delta = pred_error * self.output_activation.derivative(nodes[-1])
         weight_adjustment = np.dot(delta, nodes[-2].T)
         adjustments.insert(0, weight_adjustment)
@@ -222,7 +200,7 @@ class Net:
 
         # First layers
         delta = np.dot(self.weights[1].T, delta) * self.activation.derivative(nodes[0])
-        weight_adjustment = np.dot(delta, self.inputs.T)
+        weight_adjustment = np.dot(delta, inputs.T)
         adjustments.insert(0, weight_adjustment)
         deltas.insert(0, delta)
 
@@ -234,7 +212,7 @@ class Net:
             else:
                 self.biases[i] -= self.learning_rate * np.array([[np.mean(e)] for e in deltas[i]])
 
-    def train(self, n_iter=500, epochs=10):
+    def fit(self, inputs, outputs, n_iter=500, epochs=10):
         """
         Train the model.
         Steps:
@@ -245,10 +223,10 @@ class Net:
         """
         for t in range(epochs):
             for i in range(n_iter):
-                pred, nodes = self.forward()
-                loss = self.mean_squared_error(pred)
-                self.backward(pred, nodes)
-            print("Epoch: {} Loss: {} Mean difference: {}".format(t, loss, np.mean(self.outputs - pred)))
+                pred, nodes = self.forward(inputs)
+                loss = self.mean_squared_error(outputs, pred)
+                self.backward(inputs, outputs, pred, nodes)
+            print("Epoch: {} Loss: {} Mean difference: {}".format(t, loss, np.mean(outputs - pred)))
 
     def predict(self, input):
         """

@@ -1,7 +1,8 @@
 import numpy as np
 
+
 # Fix random seed for debug reasons
-np.random.seed(1)
+# np.random.seed(1)
 
 
 class Activation:
@@ -38,13 +39,13 @@ class Softmax(Activation):
     """
 
     @staticmethod
-    def f(X):
-        shift_X = np.exp(X - np.max(X))
-        return shift_X / np.sum(shift_X)
+    def f(x):
+        shift_x = np.exp(x - np.max(x))
+        return shift_x / np.sum(shift_x)
 
     @staticmethod
     def derivative(x):
-        raise NotImplemented()
+        return Softmax.f(x) * (1 - Softmax.f(x))
 
 
 class ReLU(Activation):
@@ -54,8 +55,8 @@ class ReLU(Activation):
     """
 
     @staticmethod
-    def f(X):
-        return np.maximum(X, 0)
+    def f(x):
+        return np.maximum(x, 0)
 
     @staticmethod
     def derivative(x):
@@ -69,12 +70,12 @@ class Softplus(Activation):
     """
 
     @staticmethod
-    def f(X):
-        return np.log(1 + np.exp(X))
+    def f(x):
+        return np.log(1 + np.exp(x))
 
     @staticmethod
-    def derivative(X):
-        return Sigmoid.f(X)
+    def derivative(x):
+        return Sigmoid.f(x)
 
 
 class Tanh(Activation):
@@ -84,12 +85,12 @@ class Tanh(Activation):
     """
 
     @staticmethod
-    def f(X):
-        return np.tanh(X)
+    def f(x):
+        return np.tanh(x)
 
     @staticmethod
-    def derivative(X):
-        return 1 - np.square(np.tanh(X))
+    def derivative(x):
+        return 1 - np.square(np.tanh(x))
 
 
 class Net:
@@ -139,22 +140,22 @@ class Net:
 
             wn = np.random.uniform(-1, 1, (self.output_shape, self.layers[-1]))
             self.weights.append(wn)
-            self.biases.append(np.random.uniform(1, 0, (self.output_shape, )))
+            self.biases.append(np.random.uniform(1, 0, (self.output_shape,)))
 
         else:
-            FIX_WEIGHT = 0.5
-            w1 = np.full((self.layers[0], self.input_shape), FIX_WEIGHT)
+            fix_weight = 0.5
+            w1 = np.full((self.layers[0], self.input_shape), fix_weight)
             self.weights.append(w1)
-            self.biases.append(np.full((self.layers[0], 1), FIX_WEIGHT))
+            self.biases.append(np.full((self.layers[0], 1), fix_weight))
 
             for i in range(len(self.layers) - 1):
-                wi = np.full((self.layers[i + 1], self.layers[i]), FIX_WEIGHT)
+                wi = np.full((self.layers[i + 1], self.layers[i]), fix_weight)
                 self.weights.append(wi)
-                self.biases.append(np.full((self.layers[i+1], 1), FIX_WEIGHT))
+                self.biases.append(np.full((self.layers[i + 1], 1), fix_weight))
 
-            wn = np.full((self.output_shape, self.layers[-1]), FIX_WEIGHT)
+            wn = np.full((self.output_shape, self.layers[-1]), fix_weight)
             self.weights.append(wn)
-            self.biases.append(np.full((self.output_shape, 1), FIX_WEIGHT))
+            self.biases.append(np.full((self.output_shape, 1), fix_weight))
 
     def cross_entropy_loss(self, pred_outputs):
         """
@@ -173,7 +174,7 @@ class Net:
         :param pred_outputs: Predicted output via neural network
         :return: value of loss
         """
-        return 1 / (2*len(pred_outputs)) * np.sum(np.square(self.outputs - pred_outputs))
+        return 1 / (2 * len(pred_outputs)) * np.sum(np.square(self.outputs - pred_outputs))
 
     def forward(self):
         """

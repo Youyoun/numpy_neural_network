@@ -119,6 +119,12 @@ class CrossEntropyLoss(Loss):
         return 1 / len(y_pred) * (y_pred - y)
 
 
+#Utils
+def shuffle(x, y):
+    randomize = np.arange(x.shape[1])
+    np.random.shuffle(randomize)
+    return x[:,randomize], y[:,randomize]
+
 class MeanSquaredError(Loss):
     @staticmethod
     def f(y, y_pred):
@@ -240,7 +246,7 @@ class Net:
             layers_nodes.append(net_value)
         return out_value, layers_nodes
 
-    def fit(self, inputs, outputs, n_iter=500, epochs=10):
+    def fit(self, inputs, outputs, n_iter=500):
         """
         Train the model.
         Steps:
@@ -251,13 +257,12 @@ class Net:
         - Repeat
         """
         self.check_dimensions(inputs, outputs)
-        for t in range(epochs):
-            for i in range(n_iter):
-                pred, nodes = self.forward(inputs)
-                loss = self.loss.f(outputs, pred)
-                weight_adjustment, bias_adjustments = self.backward(inputs, outputs, pred, nodes)
-                self.adjust_weights(weight_adjustment, bias_adjustments)
-            print("Epoch: {} Loss: {} Mean difference: {}".format(t, loss, np.mean(outputs - pred)))
+        for i in range(n_iter):
+            pred, nodes = self.forward(inputs)
+            loss = self.loss.f(outputs, pred)
+            weight_adjustment, bias_adjustments = self.backward(inputs, outputs, pred, nodes)
+            self.adjust_weights(weight_adjustment, bias_adjustments)
+            print("Iteration: {} Loss: {} Mean difference: {}".format(i, loss, np.mean(outputs - pred)))
 
     def predict(self, input):
         """
@@ -269,3 +274,31 @@ class Net:
             pred = self.activation.f(np.dot(self.weights[i], pred))
         pred = self.activation.f(np.dot(self.weights[-1], pred))
         return pred
+
+class StochasticNet(Net):
+    def __init__(self, layers=(), activation=Sigmoid, loss=CrossEntropyLoss, lr=0.01, random=True):
+        super().__init__(layers=layers, activation=activation, loss=loss, lr=lr, random=random)
+
+    def fit(self, inputs, outputs, batch_num=2, epochs=1000):
+        """
+        Train the model.
+        Steps:
+        - Forward Pass
+        - Compute Loss
+        - Backward Pass
+        - Adjust weights
+        - Repeat
+        """
+        self.check_dimensions(inputs, outputs)
+        for t in range(epochs):
+            training_set = shuffle(inputs, outputs)
+            x_batches = np.array_split(training_set[0], batch_num, axis=1)
+            y_batches = np.array_split(training_set[1], batch_num, axis=1)
+            for x, y in zip(x_batches, y_batches):
+                pred, nodes = self.forward(x)
+                loss = self.loss.f(y, pred)
+                weight_adjustment, bias_adjustments = self.backward(x, y, pred, nodes)
+                self.adjust_weights(weight_adjustment, bias_adjustments)
+            pred, _ = self.forward(inputs)
+            loss = self.loss.f(outputs, pred)
+            print("Epoch: {} Loss: {} Mean difference: {}".format(t, loss, np.mean(outputs - pred)))

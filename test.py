@@ -5,18 +5,18 @@ LEARNING_RATE = 0.8
 ACTIVATION = nn.Sigmoid
 RANDOM_WEIGHTS = True
 LOSS_FN = nn.CrossEntropyLoss
-LAYERS = (2, 5, 5, 5, 1)
+LAYERS = (2, 2, 1)
 
 INPUTS = np.array([[0, 0, 1, 1], [0, 1, 0, 1]])
 OUTPUTS = np.array([[0, 1, 1, 0]])
 
-a = nn.Net(layers=LAYERS, activation=ACTIVATION, loss=LOSS_FN, lr=LEARNING_RATE, random=RANDOM_WEIGHTS)
+a = nn.StochasticNet(layers=LAYERS, activation=ACTIVATION, loss=LOSS_FN, lr=LEARNING_RATE, random=RANDOM_WEIGHTS)
 
 print("Initial Weights: ")
 for i in range(len(a.weights)):
     print("Layer {}:\n {}\n {}".format(i, a.weights[i], a.biases[i]))
 
-a.fit(INPUTS, OUTPUTS, n_iter=1000)
+a.fit(INPUTS, OUTPUTS)
 
 result = a.predict(INPUTS)
 

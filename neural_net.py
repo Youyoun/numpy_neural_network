@@ -93,12 +93,54 @@ class Tanh(Activation):
         return 1 - np.square(np.tanh(x))
 
 
+class Loss:
+    @staticmethod
+    def f(y, y_pred):
+        raise NotImplemented()
+
+    @staticmethod
+    def delta(y, y_pred):
+        raise NotImplemented()
+
+
+class CrossEntropyLoss(Loss):
+    @staticmethod
+    def f(y, y_pred):
+        """
+        Compute loss function (Cross entropy loss)
+        Formula: E = -1/n * Sum_to_n(yi * log(yi) + (1-yi)*log(1-yi))
+        :param pred_outputs: Predicted output via neural network
+        :return: Value of loss
+        """
+        return -1 / y.shape[1] * np.sum(y * np.log(y_pred) + (1 - y) * np.log(1 - y_pred))
+
+    @staticmethod
+    def delta(y, y_pred):
+        return 1 / len(y_pred) * (y_pred - y)
+
+
+class MeanSquaredError(Loss):
+    @staticmethod
+    def f(y, y_pred):
+        """
+        Compute loss function (Mean squared error)
+        Formula: E= 1/2 * (target - out)^2
+        :param pred_outputs: Predicted output via neural network
+        :return: value of loss
+        """
+        return 1 / (2 * len(y_pred)) * np.sum(np.square(y - y_pred))
+
+    @staticmethod
+    def delta(y, y_pred):
+        return 1 / len(y_pred) * (y_pred - y)
+
+
 class Net:
     """
     Neural Net Class. Used to generate and train a model.
     """
 
-    def __init__(self, layers=(), activation=Sigmoid, lr=0.01, random=True):
+    def __init__(self, layers=(), activation=Sigmoid, loss=CrossEntropyLoss, lr=0.01, random=True):
         """
         Initialisation of our neural network
         :param inputs: Input vectors
@@ -110,9 +152,8 @@ class Net:
         self.weights = None
         self.biases = None
         self.learning_rate = lr
-        self.model = None
+        self.loss = loss
         self._intialize_weights(random)
-
         self.activation = activation
 
     def _intialize_weights(self, random=True):
@@ -143,25 +184,6 @@ class Net:
                 "Incorrect dimension of outputs: Expected {} got {}".format(self.layers[-1], outputs.shape[0]))
         return
 
-    def cross_entropy_loss(self, real_outputs, pred_outputs):
-        """
-        Compute loss function (Cross entropy loss)
-        Formula: E = -1/n * Sum_to_n(yi * log(yi) + (1-yi)*log(1-yi))
-        :param pred_outputs: Predicted output via neural network
-        :return: Value of loss
-        """
-        return -1 / real_outputs.shape[1] * np.sum(
-            real_outputs * np.log(pred_outputs) + (1 - real_outputs) * np.log(1 - pred_outputs))
-
-    def mean_squared_error(self, real_outputs, pred_outputs):
-        """
-        Compute loss function (Mean squared error)
-        Formula: E= 1/2 * (target - out)^2
-        :param pred_outputs: Predicted output via neural network
-        :return: value of loss
-        """
-        return 1 / (2 * len(pred_outputs)) * np.sum(np.square(real_outputs - pred_outputs))
-
     def adjust_weights(self, nabla_weights, nabla_bias):
         for i in range(len(self.layers) - 1):
             self.weights[i] -= self.learning_rate * nabla_weights[i]
@@ -179,7 +201,7 @@ class Net:
         deltas = []
 
         # Last layer
-        pred_error = - (1 / len(pred_outputs)) * (outputs - pred_outputs)
+        pred_error = self.loss.delta(outputs, pred_outputs)
         delta = pred_error * self.activation.derivative(nodes[-1])
         weight_adjustment = np.dot(delta, nodes[-2].T)
         adjustments.insert(0, weight_adjustment)
@@ -232,7 +254,7 @@ class Net:
         for t in range(epochs):
             for i in range(n_iter):
                 pred, nodes = self.forward(inputs)
-                loss = self.cross_entropy_loss(outputs, pred)
+                loss = self.loss.f(outputs, pred)
                 weight_adjustment, bias_adjustments = self.backward(inputs, outputs, pred, nodes)
                 self.adjust_weights(weight_adjustment, bias_adjustments)
             print("Epoch: {} Loss: {} Mean difference: {}".format(t, loss, np.mean(outputs - pred)))

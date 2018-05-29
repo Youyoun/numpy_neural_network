@@ -162,23 +162,14 @@ class Net:
         """
         return 1 / (2 * len(pred_outputs)) * np.sum(np.square(real_outputs - pred_outputs))
 
-    def forward(self, inputs):
-        """
-        Execute forward pass (not sure if should be split from back propagation)
-        """
-        layers_nodes = []
-
-        # First layer
-        net_value = np.dot(self.weights[0], inputs) + self.biases[0]
-        out_value = self.activation.f(net_value)
-        layers_nodes.append(net_value)
-
-        # Mid and Last layers
-        for i in range(1, len(self.weights)):
-            net_value = np.dot(self.weights[i], out_value) + self.biases[i]
-            out_value = self.activation.f(net_value)
-            layers_nodes.append(net_value)
-        return out_value, layers_nodes
+    def adjust_weights(self, nabla_weights, nabla_bias):
+        for i in range(len(self.layers) - 1):
+            self.weights[i] -= self.learning_rate * nabla_weights[i]
+            if self.biases[i].shape == (1,):
+                self.biases[i] -= self.learning_rate * np.array([[np.mean(e)] for e in nabla_bias[i]])[0]
+            else:
+                self.biases[i] -= self.learning_rate * np.array([[np.mean(e)] for e in nabla_bias[i]])
+        return
 
     def backward(self, inputs, outputs, pred_outputs, nodes):
         """
@@ -207,13 +198,25 @@ class Net:
         adjustments.insert(0, weight_adjustment)
         deltas.insert(0, delta)
 
-        # Update weights
-        for i in range(len(adjustments)):
-            self.weights[i] -= self.learning_rate * adjustments[i]
-            if self.biases[i].shape == (1,):
-                self.biases[i] -= self.learning_rate * np.array([[np.mean(e)] for e in deltas[i]])[0]
-            else:
-                self.biases[i] -= self.learning_rate * np.array([[np.mean(e)] for e in deltas[i]])
+        return adjustments, deltas
+
+    def forward(self, inputs):
+        """
+        Execute forward pass (not sure if should be split from back propagation)
+        """
+        layers_nodes = []
+
+        # First layer
+        net_value = np.dot(self.weights[0], inputs) + self.biases[0]
+        out_value = self.activation.f(net_value)
+        layers_nodes.append(net_value)
+
+        # Mid and Last layers
+        for i in range(1, len(self.weights)):
+            net_value = np.dot(self.weights[i], out_value) + self.biases[i]
+            out_value = self.activation.f(net_value)
+            layers_nodes.append(net_value)
+        return out_value, layers_nodes
 
     def fit(self, inputs, outputs, n_iter=500, epochs=10):
         """
@@ -222,14 +225,16 @@ class Net:
         - Forward Pass
         - Compute Loss
         - Backward Pass
+        - Adjust weights
         - Repeat
         """
         self.check_dimensions(inputs, outputs)
         for t in range(epochs):
             for i in range(n_iter):
                 pred, nodes = self.forward(inputs)
-                loss = self.mean_squared_error(outputs, pred)
-                self.backward(inputs, outputs, pred, nodes)
+                loss = self.cross_entropy_loss(outputs, pred)
+                weight_adjustment, bias_adjustments = self.backward(inputs, outputs, pred, nodes)
+                self.adjust_weights(weight_adjustment, bias_adjustments)
             print("Epoch: {} Loss: {} Mean difference: {}".format(t, loss, np.mean(outputs - pred)))
 
     def predict(self, input):

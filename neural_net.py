@@ -1,6 +1,5 @@
 import numpy as np
 
-
 # Fix random seed for debug reasons
 np.random.seed(1)
 
@@ -246,14 +245,15 @@ class Net:
             self.adjust_weights(weight_adjustment, bias_adjustments)
             pred = self.predict(inputs)
             loss = self.loss.f(outputs, pred)
-            print("Iteration: {} Loss: {}".format(i, loss, np.mean(outputs - pred)))
+            print("Iteration: {} Loss: {} Accuracy: {}".format(i, loss, np.mean(outputs - pred), np.sum(
+                [np.argmax(e) for e in pred] == [np.argmax(e) for e in outputs])))
 
     def predict(self, input):
         """
         Predict with the model (equivalent to a forward pass)
         """
         input = np.array(input)
-        pred = self.activation.f(np.dot(input, self.weights[0]) +  self.biases[0])
+        pred = self.activation.f(np.dot(input, self.weights[0]) + self.biases[0])
         for i in range(1, len(self.weights)):
             pred = self.activation.f(np.dot(pred, self.weights[i]) + self.biases[i])
         return pred
@@ -283,4 +283,5 @@ class StochasticNet(Net):
                 self.adjust_weights(weight_adjustment, bias_adjustments)
             pred = self.predict(inputs)
             loss = self.loss.f(outputs, pred)
-            print("Epoch: {} Loss: {} Mean difference: {}".format(t, loss, np.mean(outputs - pred)))
+            print("Epoch: {} Loss: {} Accuracy: {}".format(t, loss, np.mean(outputs - pred), np.sum(
+                [np.argmax(e) for e in pred] == [np.argmax(e) for e in outputs])))

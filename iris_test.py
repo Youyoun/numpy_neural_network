@@ -7,7 +7,7 @@ LEARNING_RATE = 0.001
 ACTIVATION = nn.Softmax
 RANDOM_WEIGHTS = True
 LOSS_FN = nn.CrossEntropyLoss
-LAYERS = (4, 8, 3)
+LAYERS = (4, 10, 3)
 
 DATASET = load_iris()
 INPUTS = DATASET.data
@@ -21,9 +21,9 @@ for i in range(len(Y_train)):
 Y_train_softmax = np.array(Y_train_softmax)
 # print(Y_train.shape, Y_train_softmax.shape)
 
-a = nn.StochasticNet(layers=LAYERS, activation=ACTIVATION, loss=LOSS_FN, lr=LEARNING_RATE, random=RANDOM_WEIGHTS)
+a = nn.Net(layers=LAYERS, activation=ACTIVATION, loss=LOSS_FN, lr=LEARNING_RATE, random=RANDOM_WEIGHTS)
 
-a.fit(X_train, Y_train_softmax, batch_num=60)
+a.fit(X_train, Y_train_softmax)
 
 result = a.predict(X_test)
 result = [np.argmax(e) for e in result]

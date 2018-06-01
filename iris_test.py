@@ -19,11 +19,11 @@ for i in range(len(Y_train)):
     Y_train_softmax.append(np.zeros(3))
     Y_train_softmax[i][Y_train[i]] = 1
 Y_train_softmax = np.array(Y_train_softmax)
-print(Y_train.shape, Y_train_softmax.shape)
+# print(Y_train.shape, Y_train_softmax.shape)
 
-a = nn.Net(layers=LAYERS, activation=ACTIVATION, loss=LOSS_FN, lr=LEARNING_RATE, random=RANDOM_WEIGHTS)
+a = nn.StochasticNet(layers=LAYERS, activation=ACTIVATION, loss=LOSS_FN, lr=LEARNING_RATE, random=RANDOM_WEIGHTS)
 
-a.fit(X_train, Y_train_softmax, n_iter=10000)
+a.fit(X_train, Y_train_softmax, batch_num=60)
 
 result = a.predict(X_test)
 result = [np.argmax(e) for e in result]

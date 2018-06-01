@@ -121,9 +121,9 @@ class CrossEntropyLoss(Loss):
 
 # Utils
 def shuffle(x, y):
-    randomize = np.arange(x.shape[1])
+    randomize = np.arange(x.shape[0])
     np.random.shuffle(randomize)
-    return x[:, randomize], y[:, randomize]
+    return x[randomize, :], y[randomize, :]
 
 
 class MeanSquaredError(Loss):
@@ -276,13 +276,11 @@ class StochasticNet(Net):
         self.check_dimensions(inputs, outputs)
         for t in range(epochs):
             training_set = shuffle(inputs, outputs)
-            x_batches = np.array_split(training_set[0], batch_num, axis=1)
-            y_batches = np.array_split(training_set[1], batch_num, axis=1)
+            x_batches = np.array_split(training_set[0], batch_num, axis=0)
+            y_batches = np.array_split(training_set[1], batch_num, axis=0)
             for x, y in zip(x_batches, y_batches):
-                pred, nodes = self.forward(x)
-                loss = self.loss.f(y, pred)
-                weight_adjustment, bias_adjustments = self.backward(x, y, pred, nodes)
+                weight_adjustment, bias_adjustments = self.back_propagation(x, y)
                 self.adjust_weights(weight_adjustment, bias_adjustments)
-            pred, _ = self.forward(inputs)
+            pred = self.predict(inputs)
             loss = self.loss.f(outputs, pred)
             print("Epoch: {} Loss: {} Mean difference: {}".format(t, loss, np.mean(outputs - pred)))

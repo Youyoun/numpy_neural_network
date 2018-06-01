@@ -2,7 +2,7 @@ import numpy as np
 
 
 # Fix random seed for debug reasons
-# np.random.seed(1)
+np.random.seed(1)
 
 
 class Activation:
@@ -112,7 +112,7 @@ class CrossEntropyLoss(Loss):
         :param pred_outputs: Predicted output via neural network
         :return: Value of loss
         """
-        return -1 / y.shape[1] * np.sum(y * np.log(y_pred) + (1 - y) * np.log(1 - y_pred))
+        return -1 / len(y) * np.sum(y * np.log(y_pred) + (1 - y) * np.log(1 - y_pred))
 
     @staticmethod
     def delta(y, y_pred):
@@ -180,12 +180,17 @@ class Net:
             self.weights, self.biases = np.array(weights), np.array(biases)
 
     def check_dimensions(self, inputs, outputs):
-        if self.layers[0] != inputs.shape[0]:
+        if self.layers[0] != inputs.shape[1]:
             raise ValueError(
-                "Incorrect dimension of features: Expected {} got {}".format(self.layers[0], inputs.shape[1]))
-        elif self.layers[-1] != outputs.shape[0]:
-            raise ValueError(
-                "Incorrect dimension of outputs: Expected {} got {}".format(self.layers[-1], outputs.shape[1]))
+                "Incorrect dimension of features: Expected {} got {}".format(self.layers[0], inputs.shape[0]))
+        try:
+            if self.layers[-1] != outputs.shape[1]:
+                raise ValueError(
+                    "Incorrect dimension of outputs: Expected {} got {}".format(self.layers[-1], outputs.shape[0]))
+        except IndexError:
+            if self.layers[-1] != 1:
+                raise ValueError(
+                    "Incorrect dimension of outputs: Expected {} got {}".format(self.layers[-1], 1))
         return
 
     def adjust_weights(self, nabla_weights, nabla_bias):
@@ -203,8 +208,8 @@ class Net:
         weight_adjustments = []
 
         # forward pass
-        activation = inputs
-        activations = [inputs]
+        activation = inputs.T
+        activations = [activation]
         layers_nodes = []
         for b, w in zip(self.biases, self.weights):
             z = np.dot(w, activation) + b
@@ -213,7 +218,7 @@ class Net:
             activations.append(activation)
 
         # backpass
-        delta = self.loss.delta(activations[-1], outputs)
+        delta = self.loss.delta(activations[-1], outputs.T)
         bias_adjustments.append(delta)
         nabla_w = np.dot(delta, activations[-2].T)
         weight_adjustments.append(nabla_w)
@@ -239,14 +244,14 @@ class Net:
             weight_adjustment, bias_adjustments = self.back_propagation(inputs, outputs)
             self.adjust_weights(weight_adjustment, bias_adjustments)
             pred = self.predict(inputs)
-            loss = self.loss.f(outputs, pred)
-            print("Iteration: {} Loss: {} Mean difference: {}".format(i, loss, np.mean(outputs - pred)))
+            loss = self.loss.f(outputs.T, pred)
+            print("Iteration: {} Loss: {}".format(i, loss, np.mean(outputs.T - pred)))
 
     def predict(self, input):
         """
         Predict with the model (equivalent to a forward pass)
         """
-        input = np.array(input)
+        input = np.array(input).T
         pred = self.activation.f(np.dot(self.weights[0], input) +  self.biases[0])
         for i in range(1, len(self.weights)):
             pred = self.activation.f(np.dot(self.weights[i], pred) + self.biases[i])

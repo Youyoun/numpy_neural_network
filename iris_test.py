@@ -26,5 +26,6 @@ a = nn.Net(layers=LAYERS, activation=ACTIVATION, loss=LOSS_FN, lr=LEARNING_RATE,
 a.fit(X_train, Y_train_softmax, n_iter=10000)
 
 result = a.predict(X_test)
-print(result.T)
+result = [np.argmax(e) for e in result]
+print(result)
 print("Accuracy: {}".format(np.sum(result == Y_test)))

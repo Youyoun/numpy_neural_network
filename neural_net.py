@@ -168,8 +168,8 @@ class Net:
         Initialize weights randomly
         """
         if random:
-            self.biases = [np.random.randn(y, 1) for y in self.layers[1:]]
-            self.weights = [np.random.randn(y, x) / np.sqrt(x) for x, y in zip(self.layers[:-1], self.layers[1:])]
+            self.biases = [np.random.randn(1, y) for y in self.layers[1:]]
+            self.weights = [np.random.randn(x, y) / np.sqrt(x) for x, y in zip(self.layers[:-1], self.layers[1:])]
         else:
             weights, biases = [], []
             fix_weight = 0.5
@@ -196,10 +196,11 @@ class Net:
     def adjust_weights(self, nabla_weights, nabla_bias):
         for i in range(len(self.layers) - 1):
             self.weights[i] -= self.learning_rate * nabla_weights[i]
-            if self.biases[i].shape == (1,):
-                self.biases[i] -= self.learning_rate * np.array([[np.mean(e)] for e in nabla_bias[i]])[0]
-            else:
-                self.biases[i] -= self.learning_rate * np.array([[np.mean(e)] for e in nabla_bias[i]])
+            for j in range(len(nabla_bias)):
+                if self.biases[i].shape == (1,):
+                    self.biases[i] -= self.learning_rate * nabla_bias[i][j][0]
+                else:
+                    self.biases[i] -= self.learning_rate * nabla_bias[i][j]
         return
 
     def back_propagation(self, inputs, outputs):
@@ -208,24 +209,24 @@ class Net:
         weight_adjustments = []
 
         # forward pass
-        activation = inputs.T
+        activation = inputs
         activations = [activation]
         layers_nodes = []
         for b, w in zip(self.biases, self.weights):
-            z = np.dot(w, activation) + b
+            z = np.dot(activation, w) + b
             layers_nodes.append(z)
             activation = self.activation.f(z)
             activations.append(activation)
 
         # backpass
-        delta = self.loss.delta(activations[-1], outputs.T)
+        delta = self.loss.delta(activations[-1], outputs)
         bias_adjustments.append(delta)
-        nabla_w = np.dot(delta, activations[-2].T)
+        nabla_w = np.dot(activations[-2].T, delta)
         weight_adjustments.append(nabla_w)
         for i in range(2, len(self.layers)):
-            delta = np.dot(self.weights[-i + 1].T, delta) * self.activation.derivative(layers_nodes[- i])
+            delta = np.dot(delta, self.weights[-i + 1].T) * self.activation.derivative(layers_nodes[- i])
             bias_adjustments.insert(0, delta)
-            nabla_w = np.dot(delta, activations[-i - 1].T)
+            nabla_w = np.dot(activations[-i - 1].T, delta)
             weight_adjustments.insert(0, nabla_w)
         return weight_adjustments, bias_adjustments
 
@@ -244,17 +245,17 @@ class Net:
             weight_adjustment, bias_adjustments = self.back_propagation(inputs, outputs)
             self.adjust_weights(weight_adjustment, bias_adjustments)
             pred = self.predict(inputs)
-            loss = self.loss.f(outputs.T, pred)
-            print("Iteration: {} Loss: {}".format(i, loss, np.mean(outputs.T - pred)))
+            loss = self.loss.f(outputs, pred)
+            print("Iteration: {} Loss: {}".format(i, loss, np.mean(outputs - pred)))
 
     def predict(self, input):
         """
         Predict with the model (equivalent to a forward pass)
         """
-        input = np.array(input).T
-        pred = self.activation.f(np.dot(self.weights[0], input) +  self.biases[0])
+        input = np.array(input)
+        pred = self.activation.f(np.dot(input, self.weights[0]) +  self.biases[0])
         for i in range(1, len(self.weights)):
-            pred = self.activation.f(np.dot(self.weights[i], pred) + self.biases[i])
+            pred = self.activation.f(np.dot(pred, self.weights[i]) + self.biases[i])
         return pred
 
 

@@ -17,8 +17,8 @@ X_train, X_test, Y_train, Y_test = train_test_split(INPUTS, OUTPUTS, test_size=0
 
 a = nn.Net(hidden_layers=LAYERS, activation=ACTIVATION, loss_function=LOSS_FN, lr=LEARNING_RATE)#, descent="stochastic")
 
-a.fit(X_train, Y_train, epochs=100000)
-
+a.fit(X_train, Y_train, epochs=10000)
 result = a.predict(X_test)
+print(Y_test)
 print(result)
-print("Accuracy: {}".format(np.sum(result == Y_test)))
+print("Accuracy: {}".format(np.sum(result == Y_test) / len(Y_test)))

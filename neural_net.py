@@ -33,6 +33,7 @@ class Net:
         self.n_layers = len(self.layers) + 1
         self.descent = descent
         self.activation = activation
+        self.first_fit = True
 
     def _set_input_output_layer(self, x, y):
         input_shape = x.shape[1]
@@ -132,7 +133,7 @@ class Net:
             activations.append(activation)
 
         # backpass
-        delta = self.loss.delta(activations[-1], outputs)
+        delta = self.loss.delta(outputs, activations[-1])
         bias_adjustments.append(np.mean(delta, 0))
         nabla_w = np.dot(activations[-2].T, delta)
         weight_adjustments.append(nabla_w)
@@ -184,8 +185,10 @@ class Net:
                 [np.argmax(e) for e in pred] == [np.argmax(e) for e in outputs])))
 
     def fit(self, inputs, outputs, **kwargs):
-        self._set_input_output_layer(inputs, outputs)
-        self._intialize_weights()
+        if self.first_fit:
+            self._set_input_output_layer(inputs, outputs)
+            self._intialize_weights()
+            self.first_fit = False
         if self.is_classifier:
             labels = self._fit_labels(outputs)
         else:
@@ -206,3 +209,4 @@ class Net:
             return pred
         else:
             return self._reverse_labels(pred)
+

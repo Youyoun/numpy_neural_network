@@ -35,8 +35,8 @@ class Softmax(Activation):
 
     @staticmethod
     def f(x):
-        shift_x = np.exp(x - np.max(x))
-        return shift_x / np.sum(shift_x)
+        shift_x = np.exp(x - x.max(axis=1)[:, np.newaxis])
+        return shift_x / shift_x.sum(axis=1)[:, np.newaxis]
 
     @staticmethod
     def derivative(x):

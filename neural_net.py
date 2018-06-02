@@ -1,152 +1,17 @@
 import numpy as np
+import activation as act
+import loss
+import utils
 
 # Fix random seed for debug reasons
 np.random.seed(1)
-
-
-class Activation:
-    """Interface regrouping methods of activation function"""
-
-    @staticmethod
-    def f(x):
-        raise NotImplemented()
-
-    @staticmethod
-    def derivative(x):
-        raise NotImplemented()
-
-
-class Sigmoid(Activation):
-    """
-    Sigmoid function.
-    Ref: https://en.wikipedia.org/wiki/Sigmoid_function
-    """
-
-    @staticmethod
-    def f(x):
-        return 1 / (1 + np.exp(-x))
-
-    @staticmethod
-    def derivative(x):
-        return Sigmoid.f(x) * (1 - Sigmoid.f(x))
-
-
-class Softmax(Activation):
-    """
-    Softmax function.
-    Ref: https://en.wikipedia.org/wiki/Softmax_function
-    """
-
-    @staticmethod
-    def f(x):
-        shift_x = np.exp(x - np.max(x))
-        return shift_x / np.sum(shift_x)
-
-    @staticmethod
-    def derivative(x):
-        return Softmax.f(x) * (1 - Softmax.f(x))
-
-
-class ReLU(Activation):
-    """
-    RELU activation function
-    Ref: https://en.wikipedia.org/wiki/Rectifier_(neural_networks)
-    """
-
-    @staticmethod
-    def f(x):
-        return np.maximum(x, 0)
-
-    @staticmethod
-    def derivative(x):
-        return (x > 0).astype(int)
-
-
-class Softplus(Activation):
-    """
-    Softplus activation function
-    Ref: https://en.wikipedia.org/wiki/Rectifier_(neural_networks)
-    """
-
-    @staticmethod
-    def f(x):
-        return np.log(1 + np.exp(x))
-
-    @staticmethod
-    def derivative(x):
-        return Sigmoid.f(x)
-
-
-class Tanh(Activation):
-    """
-    Softplus activation function
-    Ref: https://en.wikipedia.org/wiki/Rectifier_(neural_networks)
-    """
-
-    @staticmethod
-    def f(x):
-        return np.tanh(x)
-
-    @staticmethod
-    def derivative(x):
-        return 1 - np.square(np.tanh(x))
-
-
-class Loss:
-    @staticmethod
-    def f(y, y_pred):
-        raise NotImplemented()
-
-    @staticmethod
-    def delta(y, y_pred):
-        raise NotImplemented()
-
-
-class CrossEntropyLoss(Loss):
-    @staticmethod
-    def f(y, y_pred):
-        """
-        Compute loss function (Cross entropy loss)
-        Formula: E = -1/n * Sum_to_n(yi * log(yi) + (1-yi)*log(1-yi))
-        :param pred_outputs: Predicted output via neural network
-        :return: Value of loss
-        """
-        return -1 / len(y) * np.sum(y * np.log(y_pred) + (1 - y) * np.log(1 - y_pred))
-
-    @staticmethod
-    def delta(y, y_pred):
-        return 1 / len(y_pred) * (y_pred - y)
-
-
-# Utils
-def shuffle(x, y):
-    randomize = np.arange(x.shape[0])
-    np.random.shuffle(randomize)
-    return x[randomize, :], y[randomize, :]
-
-
-class MeanSquaredError(Loss):
-    @staticmethod
-    def f(y, y_pred):
-        """
-        Compute loss function (Mean squared error)
-        Formula: E= 1/2 * (target - out)^2
-        :param pred_outputs: Predicted output via neural network
-        :return: value of loss
-        """
-        return 1 / (2 * len(y_pred)) * np.sum(np.square(y - y_pred))
-
-    @staticmethod
-    def delta(y, y_pred):
-        return 1 / len(y_pred) * (y_pred - y)
-
 
 class Net:
     """
     Neural Net Class. Used to generate and train a model.
     """
 
-    def __init__(self, layers=(), activation=Sigmoid, loss=CrossEntropyLoss, lr=0.01, random=True):
+    def __init__(self, hidden_layers=(), activation=act.ReLU, loss_function=loss.CrossEntropyLoss, lr=0.01, descent=None):
         """
         Initialisation of our neural network
         :param inputs: Input vectors
@@ -154,13 +19,48 @@ class Net:
         :param layers: Number of nodes per layer (only linear layers are supported)
         :param lr: Learning rate
         """
-        self.layers = layers
         self.weights = None
         self.biases = None
         self.learning_rate = lr
-        self.loss = loss
-        self._intialize_weights(random)
+        self.loss = loss_function
+        if self.loss == loss.CrossEntropyLoss:
+            self.is_classifier = True
+            self.outer_activation = act.Softmax
+        else:
+            self.is_classifier = False
+            self.outer_activation = act.Identity
+        self.layers = list(hidden_layers)
+        self.n_layers = len(self.layers) + 1
+        self.descent = descent
         self.activation = activation
+
+    def _set_input_output_layer(self, x, y):
+        input_shape = x.shape[1]
+        try:
+            output_shape = y.shape[1]
+        except IndexError:
+            output_shape = 1
+
+        self.layers.insert(0, input_shape)
+        if self.is_classifier:
+            self.labels = self._get_classes(y)
+            self.n_classes = len(self.labels)
+            self.layers.append(self.n_classes)
+        else:
+            self.layers.append(output_shape)
+        print(self.layers, self.labels)
+        return
+
+    def _get_classes(self, y):
+        labels = np.unique(y)
+        return {i:labels[i] for i in range(len(labels))}
+
+    def _fit_labels(self, y):
+        new_labels = [[0]*self.n_classes for i in range(len(y))]
+        for i in range(len(y)):
+            new_labels[i][y[i]] = 1
+        return np.array(new_labels)
+
 
     def _intialize_weights(self, random=True):
         """
@@ -211,25 +111,28 @@ class Net:
         activation = inputs
         activations = [activation]
         layers_nodes = []
-        for b, w in zip(self.biases, self.weights):
-            z = np.dot(activation, w) + b
+        for i in range(self.n_layers):
+            z = np.dot(activation, self.weights[i]) + self.biases[i]
             layers_nodes.append(z)
-            activation = self.activation.f(z)
+            if i == self.n_layers - 1: #last layer
+                activation = self.outer_activation.f(z)
+            else:
+                activation = self.activation.f(z)
             activations.append(activation)
 
         # backpass
         delta = self.loss.delta(activations[-1], outputs)
-        bias_adjustments.append(delta)
+        bias_adjustments.append(np.mean(delta, 0))
         nabla_w = np.dot(activations[-2].T, delta)
         weight_adjustments.append(nabla_w)
         for i in range(2, len(self.layers)):
             delta = np.dot(delta, self.weights[-i + 1].T) * self.activation.derivative(layers_nodes[- i])
-            bias_adjustments.insert(0, delta)
+            bias_adjustments.insert(0, np.mean(delta, 0))
             nabla_w = np.dot(activations[-i - 1].T, delta)
             weight_adjustments.insert(0, nabla_w)
         return weight_adjustments, bias_adjustments
 
-    def fit(self, inputs, outputs, n_iter=500):
+    def _fit(self, inputs, outputs, epochs=500):
         """
         Train the model.
         Steps:
@@ -239,14 +142,50 @@ class Net:
         - Adjust weights
         - Repeat
         """
-        self.check_dimensions(inputs, outputs)
-        for i in range(n_iter):
+        for i in range(epochs):
             weight_adjustment, bias_adjustments = self.back_propagation(inputs, outputs)
             self.adjust_weights(weight_adjustment, bias_adjustments)
             pred = self.predict(inputs)
             loss = self.loss.f(outputs, pred)
             print("Iteration: {} Loss: {} Accuracy: {}".format(i, loss, np.mean(outputs - pred), np.sum(
                 [np.argmax(e) for e in pred] == [np.argmax(e) for e in outputs])))
+
+    def _fit_stochastic(self, inputs, outputs, iter=2, epochs=1000):
+        """
+        Train the model.
+        Steps:
+        - Forward Pass
+        - Compute Loss
+        - Backward Pass
+        - Adjust weights
+        - Repeat
+        """
+        for t in range(epochs):
+            training_set = utils.shuffle(inputs, outputs)
+            x_batches = np.array_split(training_set[0], iter, axis=0)
+            y_batches = np.array_split(training_set[1], iter, axis=0)
+            for x, y in zip(x_batches, y_batches):
+                weight_adjustment, bias_adjustments = self.back_propagation(x, y)
+                self.adjust_weights(weight_adjustment, bias_adjustments)
+            pred = self.predict(inputs)
+            loss = self.loss.f(outputs, pred)
+            print("Epoch: {} Loss: {} Accuracy: {}".format(t, loss, np.mean(outputs - pred), np.sum(
+                [np.argmax(e) for e in pred] == [np.argmax(e) for e in outputs])))
+
+    def fit(self, inputs, outputs, **kwargs):
+        self._set_input_output_layer(inputs, outputs)
+        self._intialize_weights()
+        if self.is_classifier:
+            labels = self._fit_labels(outputs)
+        else:
+            labels = outputs.copy()
+        # self.check_dimensions(inputs, outputs)
+        if self.descent == 'stochastic':
+            return self._fit_stochastic(inputs, labels, **kwargs)
+        elif self.descent is None:
+            return self._fit(inputs, labels, **kwargs)
+        else:
+            raise ValueError("Incorrect descent method (only accept Stochastic or None)")
 
     def predict(self, input):
         """
@@ -259,29 +198,29 @@ class Net:
         return pred
 
 
-class StochasticNet(Net):
-    def __init__(self, layers=(), activation=Sigmoid, loss=CrossEntropyLoss, lr=0.01, random=True):
-        super().__init__(layers=layers, activation=activation, loss=loss, lr=lr, random=random)
-
-    def fit(self, inputs, outputs, batch_num=2, epochs=1000):
-        """
-        Train the model.
-        Steps:
-        - Forward Pass
-        - Compute Loss
-        - Backward Pass
-        - Adjust weights
-        - Repeat
-        """
-        self.check_dimensions(inputs, outputs)
-        for t in range(epochs):
-            training_set = shuffle(inputs, outputs)
-            x_batches = np.array_split(training_set[0], batch_num, axis=0)
-            y_batches = np.array_split(training_set[1], batch_num, axis=0)
-            for x, y in zip(x_batches, y_batches):
-                weight_adjustment, bias_adjustments = self.back_propagation(x, y)
-                self.adjust_weights(weight_adjustment, bias_adjustments)
-            pred = self.predict(inputs)
-            loss = self.loss.f(outputs, pred)
-            print("Epoch: {} Loss: {} Accuracy: {}".format(t, loss, np.mean(outputs - pred), np.sum(
-                [np.argmax(e) for e in pred] == [np.argmax(e) for e in outputs])))
+# class StochasticNet(Net):
+#     def __init__(self, layers=(), activation=Sigmoid, loss=CrossEntropyLoss, lr=0.01, random=True):
+#         super().__init__(layers=layers, activation=activation, loss=loss, lr=lr, random=random)
+#
+#     def fit(self, inputs, outputs, iter=2, epochs=1000):
+#         """
+#         Train the model.
+#         Steps:
+#         - Forward Pass
+#         - Compute Loss
+#         - Backward Pass
+#         - Adjust weights
+#         - Repeat
+#         """
+#         self.check_dimensions(inputs, outputs)
+#         for t in range(epochs):
+#             training_set = shuffle(inputs, outputs)
+#             x_batches = np.array_split(training_set[0], iter, axis=0)
+#             y_batches = np.array_split(training_set[1], iter, axis=0)
+#             for x, y in zip(x_batches, y_batches):
+#                 weight_adjustment, bias_adjustments = self.back_propagation(x, y)
+#                 self.adjust_weights(weight_adjustment, bias_adjustments)
+#             pred = self.predict(inputs)
+#             loss = self.loss.f(outputs, pred)
+#             print("Epoch: {} Loss: {} Accuracy: {}".format(t, loss, np.mean(outputs - pred), np.sum(
+#                 [np.argmax(e) for e in pred] == [np.argmax(e) for e in outputs])))

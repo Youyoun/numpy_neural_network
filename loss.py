@@ -19,7 +19,7 @@ class CrossEntropyLoss(Loss):
         :param pred_outputs: Predicted output via neural network
         :return: Value of loss
         """
-        return -1 / len(y) * np.sum(y * np.log(y_pred) + (1 - y) * np.log(1 - y_pred))
+        return -1 / len(y) * np.sum(y * np.log(y_pred+1e-10) + (1 - y) * np.log((1 - y_pred)+1e-10))
 
     @staticmethod
     def delta(y, y_pred):

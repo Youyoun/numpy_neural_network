@@ -58,9 +58,11 @@ class Net:
     def _fit_labels(self, y):
         new_labels = [[0]*self.n_classes for i in range(len(y))]
         for i in range(len(y)):
-            new_labels[i][y[i]] = 1
+            new_labels[i][self.labels[y[i]]] = 1
         return np.array(new_labels)
 
+    def _reverse_labels(self, y_pred):
+        return np.array([self.labels[np.argmax(e)] for e in y_pred])
 
     def _intialize_weights(self, random=True):
         """
@@ -101,6 +103,15 @@ class Net:
                 else:
                     self.biases[i] -= self.learning_rate * nabla_bias[i][j]
         return
+
+    def feed_forward(self, input):
+        pred = np.array(input)
+        for i in range(self.n_layers):
+            if not i == self.n_layers - 1:
+                pred = self.activation.f(np.dot(pred, self.weights[i]) + self.biases[i])
+            else:
+                pred = self.outer_activation.f(np.dot(pred, self.weights[i]) + self.biases[i])
+        return pred
 
     def back_propagation(self, inputs, outputs):
 
@@ -145,7 +156,7 @@ class Net:
         for i in range(epochs):
             weight_adjustment, bias_adjustments = self.back_propagation(inputs, outputs)
             self.adjust_weights(weight_adjustment, bias_adjustments)
-            pred = self.predict(inputs)
+            pred = self.feed_forward(inputs)
             loss = self.loss.f(outputs, pred)
             print("Iteration: {} Loss: {} Accuracy: {}".format(i, loss, np.mean(outputs - pred), np.sum(
                 [np.argmax(e) for e in pred] == [np.argmax(e) for e in outputs])))
@@ -167,7 +178,7 @@ class Net:
             for x, y in zip(x_batches, y_batches):
                 weight_adjustment, bias_adjustments = self.back_propagation(x, y)
                 self.adjust_weights(weight_adjustment, bias_adjustments)
-            pred = self.predict(inputs)
+            pred = self.feed_forward(inputs)
             loss = self.loss.f(outputs, pred)
             print("Epoch: {} Loss: {} Accuracy: {}".format(t, loss, np.mean(outputs - pred), np.sum(
                 [np.argmax(e) for e in pred] == [np.argmax(e) for e in outputs])))
@@ -179,7 +190,6 @@ class Net:
             labels = self._fit_labels(outputs)
         else:
             labels = outputs.copy()
-        # self.check_dimensions(inputs, outputs)
         if self.descent == 'stochastic':
             return self._fit_stochastic(inputs, labels, **kwargs)
         elif self.descent is None:
@@ -191,36 +201,8 @@ class Net:
         """
         Predict with the model (equivalent to a forward pass)
         """
-        input = np.array(input)
-        pred = self.activation.f(np.dot(input, self.weights[0]) + self.biases[0])
-        for i in range(1, len(self.weights)):
-            pred = self.activation.f(np.dot(pred, self.weights[i]) + self.biases[i])
-        return pred
-
-
-# class StochasticNet(Net):
-#     def __init__(self, layers=(), activation=Sigmoid, loss=CrossEntropyLoss, lr=0.01, random=True):
-#         super().__init__(layers=layers, activation=activation, loss=loss, lr=lr, random=random)
-#
-#     def fit(self, inputs, outputs, iter=2, epochs=1000):
-#         """
-#         Train the model.
-#         Steps:
-#         - Forward Pass
-#         - Compute Loss
-#         - Backward Pass
-#         - Adjust weights
-#         - Repeat
-#         """
-#         self.check_dimensions(inputs, outputs)
-#         for t in range(epochs):
-#             training_set = shuffle(inputs, outputs)
-#             x_batches = np.array_split(training_set[0], iter, axis=0)
-#             y_batches = np.array_split(training_set[1], iter, axis=0)
-#             for x, y in zip(x_batches, y_batches):
-#                 weight_adjustment, bias_adjustments = self.back_propagation(x, y)
-#                 self.adjust_weights(weight_adjustment, bias_adjustments)
-#             pred = self.predict(inputs)
-#             loss = self.loss.f(outputs, pred)
-#             print("Epoch: {} Loss: {} Accuracy: {}".format(t, loss, np.mean(outputs - pred), np.sum(
-#                 [np.argmax(e) for e in pred] == [np.argmax(e) for e in outputs])))
+        pred = self.feed_forward(input)
+        if not self.is_classifier:
+            return pred
+        else:
+            return self._reverse_labels(pred)

@@ -6,12 +6,14 @@ import utils
 # Fix random seed for debug reasons
 np.random.seed(0)
 
+
 class Net:
     """
     Neural Net Class. Used to generate and train a model.
     """
 
-    def __init__(self, hidden_layers=(), activation=act.ReLU, loss_function=loss.CrossEntropyLoss, lr=0.01, descent=None, save_metrics=False):
+    def __init__(self, hidden_layers=(), activation=act.ReLU, loss_function=loss.CrossEntropyLoss, lr=0.01,
+                 descent=None, save_metrics=False, dropout=False):
         """
         Initialisation of our neural network
         :param inputs: Input vectors
@@ -44,6 +46,9 @@ class Net:
             }
         else:
             self.metrics = None
+        self.srivastava = dropout
+        self.entry_proba = 0.1
+        self.hidden_proba = 0.5
 
     def _set_input_output_layer(self, x, y):
         input_shape = x.shape[1]
@@ -63,10 +68,10 @@ class Net:
 
     def _get_classes(self, y):
         labels = np.unique(y)
-        return {i:labels[i] for i in range(len(labels))}
+        return {i: labels[i] for i in range(len(labels))}
 
     def _fit_labels(self, y):
-        new_labels = [[0]*self.n_classes for i in range(len(y))]
+        new_labels = [[0] * self.n_classes for i in range(len(y))]
         for i in range(len(y)):
             new_labels[i][self.labels[y[i]]] = 1
         return np.array(new_labels)
@@ -123,29 +128,29 @@ class Net:
                 pred = self.outer_activation.f(np.dot(pred, self.weights[i]) + self.biases[i])
         return pred
 
-    def back_propagation(self, inputs, outputs, dropout=True):
+    def back_propagation(self, inputs, outputs):
 
         bias_adjustments = []
         weight_adjustments = []
 
         # forward pass
         activation = inputs
-        if dropout:
+        if self.srivastava:
             self.backup_weights = self.weights.copy()
             self.backup_biases = self.biases.copy()
             masks = []
-            activation, self.weights[0], _, mask = self.dropout(0, activation)
+            activation, self.weights[0], _, mask = self.dropout(0, activation, proba=self.entry_proba)
             masks.append(mask)
         activations = [activation]
         layers_nodes = []
         for i in range(self.n_layers):
             z = np.dot(activation, self.weights[i]) + self.biases[i]
 
-            if dropout and not i == self.n_layers - 1:
-                z, self.weights[i+1], self.weights[i], mask = self.dropout(i+1, z)
+            if self.srivastava and not i == self.n_layers - 1:
+                z, self.weights[i + 1], self.weights[i], mask = self.dropout(i + 1, z, proba=self.hidden_proba)
                 masks.append(mask)
             layers_nodes.append(z)
-            if i == self.n_layers - 1: #last layer
+            if i == self.n_layers - 1:  # last layer
                 activation = self.outer_activation.f(z)
             else:
                 activation = self.activation.f(z)
@@ -162,9 +167,9 @@ class Net:
             nabla_w = np.dot(activations[-i - 1].T, delta)
             weight_adjustments.insert(0, nabla_w)
         self.adjust_weights(weight_adjustments, bias_adjustments)
-        if dropout:
+        if self.srivastava:
             for i in range(self.n_layers - 1):
-                self.weights[i] = self.fix_dropout(self.weights[i], self.backup_weights[i], masks[i], masks[i+1])
+                self.weights[i] = self.fix_dropout(self.weights[i], self.backup_weights[i], masks[i], masks[i + 1])
             self.weights[-1] = self.fix_dropout(self.weights[-1], self.backup_weights[-1], masks[-1], None)
         return
 
@@ -193,7 +198,6 @@ class Net:
                     self.metrics["accuracy"].append(acc)
                 self.metrics["loss"].append(loss)
                 self.metrics["lr"].append(self.learning_rate)
-
 
     def _fit_stochastic(self, inputs, outputs, iter=2, epochs=1000):
         """
@@ -244,13 +248,13 @@ class Net:
 
     def dropout(self, layer_index, activation, proba=0.5, random_state=122):
         rng = np.random.RandomState(random_state)
-        mask = 1 - rng.binomial(size=(activation.shape[1],), n=1, p=1-proba)
+        mask = 1 - rng.binomial(size=(activation.shape[1],), n=1, p=proba)
         dropout_act = activation[:, mask == 1]
         next_weight_new = self.weights[layer_index][mask == 1, :]
         if layer_index == 0:
             prev_weight_new = None
         else:
-            prev_weight_new = self.weights[layer_index-1][:, mask == 1]
+            prev_weight_new = self.weights[layer_index - 1][:, mask == 1]
         return dropout_act, next_weight_new, prev_weight_new, mask
 
     def fix_dropout(self, new_weights, old_weights, mask_prev, mask_next=None):
@@ -259,11 +263,11 @@ class Net:
             if mask_next is not None:
                 conf_matrix = utils.confusion_matrix(mask_next, mask_prev)
                 indexes = np.argwhere(conf_matrix)
-                c=0
+                c = 0
                 for i in range(len(new_weights)):
                     for j in range(len(new_weights[i])):
-                        new_w[indexes[c][0], indexes[c][1]] = new_weights[i,j]
-                        c+=1
+                        new_w[indexes[c][0], indexes[c][1]] = new_weights[i, j]
+                        c += 1
         else:
             new_w = self.fix_dropout(new_weights, old_weights, mask_prev, np.ones(old_weights.shape[1]))
         return new_w
@@ -279,4 +283,3 @@ class Net:
             return pred
         else:
             return self._reverse_labels(pred)
-

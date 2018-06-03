@@ -11,7 +11,7 @@ class Net:
     Neural Net Class. Used to generate and train a model.
     """
 
-    def __init__(self, hidden_layers=(), activation=act.ReLU, loss_function=loss.CrossEntropyLoss, lr=0.01, descent=None):
+    def __init__(self, hidden_layers=(), activation=act.ReLU, loss_function=loss.CrossEntropyLoss, lr=0.01, descent=None, save_metrics=False):
         """
         Initialisation of our neural network
         :param inputs: Input vectors
@@ -34,6 +34,16 @@ class Net:
         self.descent = descent
         self.activation = activation
         self.first_fit = True
+        if save_metrics:
+            self.metrics = {
+                "epoch": [],
+                "iter": [],
+                "loss": [],
+                "accuracy": [],
+                "lr": [],
+            }
+        else:
+            self.metrics = None
 
     def _set_input_output_layer(self, x, y):
         input_shape = x.shape[1]
@@ -164,6 +174,12 @@ class Net:
                 print("Iteration: {} Loss: {} Accuracy: {}".format(i, loss, acc))
             else:
                 print("Iteration: {} Loss: {}".format(i, loss))
+            if self.metrics is not None:
+                self.metrics["epoch"].append(i)
+                if self.is_classifier:
+                    self.metrics["accuracy"].append(acc)
+                self.metrics["loss"].append(loss)
+                self.metrics["lr"].append(self.learning_rate)
 
     def _fit_stochastic(self, inputs, outputs, iter=2, epochs=1000):
         """
@@ -189,6 +205,13 @@ class Net:
                 print("Epoch: {} Loss: {} Accuracy: {}".format(t, loss, acc))
             else:
                 print("Epoch: {} Loss: {}".format(t, loss))
+            if self.metrics is not None:
+                self.metrics["epoch"].append(t)
+                self.metrics["iter"].append(iter)
+                if self.is_classifier:
+                    self.metrics["accuracy"].append(acc)
+                self.metrics["loss"].append(loss)
+                self.metrics["lr"].append(self.learning_rate)
 
     def fit(self, inputs, outputs, **kwargs):
         if self.first_fit:

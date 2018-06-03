@@ -15,7 +15,7 @@ INPUTS = DATASET.data
 OUTPUTS = DATASET.target
 X_train, X_test, Y_train, Y_test = train_test_split(INPUTS, OUTPUTS, test_size=0.2, random_state=42)
 
-a = nn.Net(hidden_layers=LAYERS, activation=ACTIVATION, loss_function=LOSS_FN, lr=LEARNING_RATE , descent="stochastic")
+a = nn.Net(hidden_layers=LAYERS, activation=ACTIVATION, loss_function=LOSS_FN, lr=LEARNING_RATE , descent="stochastic", save_metrics=True)
 
 a.fit(X_train, Y_train, epochs=200)
 result = a.predict(X_test)

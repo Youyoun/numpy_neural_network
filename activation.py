@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Activation:
     """Interface regrouping methods of activation function"""
 
@@ -86,6 +87,7 @@ class Tanh(Activation):
     @staticmethod
     def derivative(x):
         return 1 - np.square(np.tanh(x))
+
 
 class Identity(Activation):
     @staticmethod

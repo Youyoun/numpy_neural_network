@@ -5,7 +5,7 @@ import numpy as np
 import activation as act
 import loss
 
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.04
 ACTIVATION = act.ReLU
 LOSS_FN = loss.CrossEntropyLoss
 LAYERS = (10,)
@@ -18,7 +18,7 @@ X_train, X_test, Y_train, Y_test = train_test_split(INPUTS, OUTPUTS, test_size=0
 a = nn.Net(hidden_layers=LAYERS, activation=ACTIVATION, loss_function=LOSS_FN, lr=LEARNING_RATE, descent="stochastic",
            save_metrics=True, dropout=True)
 
-a.fit(X_train, Y_train, epochs=5000)
+a.fit(X_train, Y_train, epochs=500)
 result = a.predict(X_test)
 print(Y_test)
 print(result)

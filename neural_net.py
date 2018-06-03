@@ -233,6 +233,8 @@ class Net:
         """
         Predict with the model (equivalent to a forward pass)
         """
+        if self.first_fit:
+            raise ValueError("Train model before predicting")
         pred = self.feed_forward(input)
         if not self.is_classifier:
             return pred

@@ -4,7 +4,7 @@ import loss
 import utils
 
 # Fix random seed for debug reasons
-np.random.seed(1)
+np.random.seed(0)
 
 class Net:
     """
@@ -159,8 +159,11 @@ class Net:
             self.adjust_weights(weight_adjustment, bias_adjustments)
             pred = self.feed_forward(inputs)
             loss = self.loss.f(outputs, pred)
-            print("Iteration: {} Loss: {} Accuracy: {}".format(i, loss, np.mean(outputs - pred), np.sum(
-                [np.argmax(e) for e in pred] == [np.argmax(e) for e in outputs])))
+            if self.is_classifier:
+                acc = np.sum(self._reverse_labels(outputs) == self._reverse_labels(pred)) / len(outputs) * 100
+                print("Iteration: {} Loss: {} Accuracy: {}".format(i, loss, acc))
+            else:
+                print("Iteration: {} Loss: {}".format(i, loss))
 
     def _fit_stochastic(self, inputs, outputs, iter=2, epochs=1000):
         """
@@ -181,8 +184,11 @@ class Net:
                 self.adjust_weights(weight_adjustment, bias_adjustments)
             pred = self.feed_forward(inputs)
             loss = self.loss.f(outputs, pred)
-            print("Epoch: {} Loss: {} Accuracy: {}".format(t, loss, np.mean(outputs - pred), np.sum(
-                [np.argmax(e) for e in pred] == [np.argmax(e) for e in outputs])))
+            if self.is_classifier:
+                acc = np.sum(self._reverse_labels(outputs) == self._reverse_labels(pred)) / len(outputs) * 100
+                print("Epoch: {} Loss: {} Accuracy: {}".format(t, loss, acc))
+            else:
+                print("Epoch: {} Loss: {}".format(t, loss))
 
     def fit(self, inputs, outputs, **kwargs):
         if self.first_fit:

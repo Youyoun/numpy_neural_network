@@ -108,7 +108,7 @@ class Net:
     def adjust_weights(self, nabla_weights, nabla_bias):
         for i in range(len(self.layers) - 1):
             self.weights[i] -= self.learning_rate * nabla_weights[i]
-            for j in range(len(nabla_bias)):
+            for j in range(len(nabla_bias[i])):
                 if self.biases[i].shape == (1,):
                     self.biases[i] -= self.learning_rate * nabla_bias[i][j][0]
                 else:
